@@ -1,22 +1,24 @@
-const input = document.getElementById('input')
-const sendBtn = document.getElementById('send')
-const responseEl = document.getElementById('response')
-const api = window.electronAPI
+const input = document.getElementById("input")
+const sendBtn = document.getElementById("send")
+const micBtn = document.getElementById("mic")
+const responseEl = document.getElementById("response")
+const liveEl = document.getElementById("live")
 
-if (sendBtn && input && responseEl && api) {
-  api.onPythonResponse((reply) => {
-    responseEl.textContent = reply
-  })
-  sendBtn.addEventListener('click', () => {
+if (sendBtn && input && responseEl) {
+  sendBtn.addEventListener("click", () => {
     const text = input.value.trim()
     if (text) {
-      api.sendToPython(text)
-      input.value = ''
+      responseEl.textContent = "You said: " + text
+      input.value = ""
     }
   })
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') {
-      sendBtn.click()
-    }
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") sendBtn.click()
+  })
+}
+
+if (micBtn) {
+  micBtn.addEventListener("click", () => {
+    micBtn.classList.toggle("recording")
   })
 }
