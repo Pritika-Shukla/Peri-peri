@@ -1,10 +1,7 @@
 # Dependencies
 node_modules/
 
-# TypeScript build output (tsconfig outDir: ".")
-main.js
-preload.js
-renderer.js
+dist/
 *.js.map
 
 # Python

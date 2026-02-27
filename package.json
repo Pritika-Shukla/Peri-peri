@@ -4,8 +4,7 @@
   "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "tsc",
-    "start": "npm run build && electron ."
+    "start": "electron ."
   },
   "keywords": [],
   "author": "",
@@ -13,7 +12,6 @@
   "type": "commonjs",
   "description": "",
   "devDependencies": {
-    "electron": "^40.6.1",
-    "typescript": "^5.7.2"
+    "electron": "^40.6.1"
   }
 }
