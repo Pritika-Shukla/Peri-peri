@@ -45,6 +45,39 @@ function toggleWindow() {
 }
 
 let recordingProcess = null
+let wakeWordProcess = null
+
+function startWakeWordListener() {
+  if (wakeWordProcess) return
+  const scriptPath = path.join(__dirname, "wakeword.py")
+  wakeWordProcess = spawn("python", [scriptPath], {
+    cwd: __dirname,
+    stdio: ["ignore", "pipe", "pipe"],
+  })
+  let buffer = ""
+  wakeWordProcess.stdout.on("data", (chunk) => {
+    buffer += chunk.toString()
+    const lines = buffer.split("\n")
+    buffer = lines.pop() || ""
+    for (const line of lines) {
+      if (line.trim() === "WAKE" && mainWindow) {
+        if (!mainWindow.isVisible()) {
+          mainWindow.show()
+          mainWindow.focus()
+        }
+      }
+    }
+  })
+  wakeWordProcess.stderr.on("data", (chunk) => {
+    console.error("[wakeword]", chunk.toString())
+  })
+  wakeWordProcess.on("close", (code) => {
+    wakeWordProcess = null
+    if (code !== 0 && code !== null) {
+      console.warn("[wakeword] process exited with code", code)
+    }
+  })
+}
 
 ipcMain.handle("start-recording", () => {
   if (recordingProcess) return
@@ -77,10 +110,15 @@ ipcMain.handle("stop-recording", async () => {
 app.whenReady().then(() => {
   createWindow()
   globalShortcut.register("F9", toggleWindow)
+  startWakeWordListener()
 })
 
 app.on("will-quit", () => {
   globalShortcut.unregisterAll()
+  if (wakeWordProcess) {
+    wakeWordProcess.kill()
+    wakeWordProcess = null
+  }
 })
 
 app.on("window-all-closed", () => {
