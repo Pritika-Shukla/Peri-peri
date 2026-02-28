@@ -18,7 +18,31 @@ if (sendBtn && input && responseEl) {
 }
 
 if (micBtn) {
-  micBtn.addEventListener("click", () => {
-    micBtn.classList.toggle("recording")
+  let isRecording = false
+  micBtn.addEventListener("click", async () => {
+    if (!window.electronAPI?.startRecording) return
+    if (!isRecording) {
+      await window.electronAPI.startRecording()
+      isRecording = true
+      micBtn.classList.add("recording")
+      if (liveEl) liveEl.textContent = "Recording... click to stop"
+    } else {
+      if (liveEl) liveEl.textContent = "Converting..."
+      try {
+        const text = await window.electronAPI.stopRecording()
+        if (liveEl) liveEl.textContent = ""
+        if (text && responseEl) {
+          responseEl.textContent = "You said: " + text
+          if (input) input.value = text
+        } else if (liveEl) {
+          liveEl.textContent = "Could not understand audio"
+        }
+      } catch (e) {
+        if (liveEl) liveEl.textContent = e.message || "Error"
+      } finally {
+        isRecording = false
+        micBtn.classList.remove("recording")
+      }
+    }
   })
 }

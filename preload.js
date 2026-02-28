@@ -1,3 +1,6 @@
-const { contextBridge } = require("electron")
+const { contextBridge, ipcRenderer } = require("electron")
 
-contextBridge.exposeInMainWorld("electronAPI", {})
+contextBridge.exposeInMainWorld("electronAPI", {
+  startRecording: () => ipcRenderer.invoke("start-recording"),
+  stopRecording: () => ipcRenderer.invoke("stop-recording"),
+})

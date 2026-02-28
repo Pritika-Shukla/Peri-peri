@@ -1,6 +1,7 @@
 import path from "path"
 import { fileURLToPath } from "url"
-import { app, BrowserWindow, globalShortcut, screen } from "electron"
+import { app, BrowserWindow, globalShortcut, screen, ipcMain } from "electron"
+import { spawn } from "child_process"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -42,6 +43,36 @@ function toggleWindow() {
     mainWindow.focus()
   }
 }
+
+let recordingProcess = null
+
+ipcMain.handle("start-recording", () => {
+  if (recordingProcess) return
+  const scriptPath = path.join(__dirname, "speechrecognition.py")
+  recordingProcess = spawn("python", [scriptPath, "--record-until-stop"], {
+    cwd: __dirname,
+    stdio: ["pipe", "pipe", "pipe"],
+  })
+  return true
+})
+
+ipcMain.handle("stop-recording", async () => {
+  if (!recordingProcess) return null
+  return new Promise((resolve) => {
+    let stdout = ""
+    let stderr = ""
+    recordingProcess.stdout.on("data", (chunk) => { stdout += chunk })
+    recordingProcess.stderr.on("data", (chunk) => { stderr += chunk })
+    recordingProcess.on("close", (code) => {
+      recordingProcess = null
+      const text = stdout.trim()
+      if (code === 0 && text) resolve(text)
+      else resolve(null)
+    })
+    recordingProcess.stdin.write("stop\n")
+    recordingProcess.stdin.end()
+  })
+})
 
 app.whenReady().then(() => {
   createWindow()
