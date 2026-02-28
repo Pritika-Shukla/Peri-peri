@@ -1,7 +1,10 @@
+import dotenv from "dotenv";
+dotenv.config();
 import path from "path"
 import { fileURLToPath } from "url"
 import { app, BrowserWindow, globalShortcut, screen, ipcMain } from "electron"
 import { spawn } from "child_process"
+import { ask as askOpenAI } from "./services/openai.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -78,6 +81,14 @@ function startWakeWordListener() {
     }
   })
 }
+
+ipcMain.handle("ask-openai", async (_, text) => {
+  try {
+    return await askOpenAI(text)
+  } catch (e) {
+    throw new Error(e.message || "OpenAI request failed")
+  }
+})
 
 ipcMain.handle("start-recording", () => {
   if (recordingProcess) return

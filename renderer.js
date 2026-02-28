@@ -5,11 +5,21 @@ const responseEl = document.getElementById("response")
 const liveEl = document.getElementById("live")
 
 if (sendBtn && input && responseEl) {
-  sendBtn.addEventListener("click", () => {
+  sendBtn.addEventListener("click", async () => {
     const text = input.value.trim()
-    if (text) {
+    if (!text) return
+    if (!window.electronAPI?.askOpenAI) {
       responseEl.textContent = "You said: " + text
       input.value = ""
+      return
+    }
+    responseEl.textContent = "…"
+    input.value = ""
+    try {
+      const reply = await window.electronAPI.askOpenAI(text)
+      responseEl.textContent = reply || "(No response)"
+    } catch (e) {
+      responseEl.textContent = e.message || "Error"
     }
   })
   input.addEventListener("keydown", (e) => {
