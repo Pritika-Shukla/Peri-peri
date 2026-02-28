@@ -1,29 +1,45 @@
 const input = document.getElementById("input")
 const sendBtn = document.getElementById("send")
 const micBtn = document.getElementById("mic")
-const responseEl = document.getElementById("response")
+const chatEl = document.getElementById("chat")
 const liveEl = document.getElementById("live")
 
-if (sendBtn && input && responseEl) {
-  sendBtn.addEventListener("click", async () => {
-    const text = input.value.trim()
-    if (!text) return
-    if (!window.electronAPI?.askOpenAI) {
-      responseEl.textContent = "You said: " + text
-      input.value = ""
-      return
-    }
-    responseEl.textContent = "…"
-    input.value = ""
-    try {
-      const reply = await window.electronAPI.askOpenAI(text)
-      responseEl.textContent = reply || "(No response)"
-    } catch (e) {
-      responseEl.textContent = e.message || "Error"
-    }
-  })
+function addMessage(role, text) {
+  if (!chatEl) return
+  const div = document.createElement("div")
+  div.className = `msg ${role}`
+  div.textContent = text
+  chatEl.appendChild(div)
+  chatEl.scrollTop = chatEl.scrollHeight
+  return div
+}
+
+async function sendUserMessage(text) {
+  if (!text.trim()) return
+  addMessage("user", text.trim())
+  input.value = ""
+
+  if (!window.electronAPI?.askOpenAI) {
+    addMessage("assistant", "You said: " + text.trim())
+    return
+  }
+
+  const thinkingEl = addMessage("assistant", "…")
+  thinkingEl.classList.add("thinking")
+  try {
+    const reply = await window.electronAPI.askOpenAI(text.trim())
+    thinkingEl.remove()
+    addMessage("assistant", reply || "(No response)")
+  } catch (e) {
+    thinkingEl.remove()
+    addMessage("assistant", e.message || "Error")
+  }
+}
+
+if (sendBtn && input && chatEl) {
+  sendBtn.addEventListener("click", () => sendUserMessage(input.value))
   input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") sendBtn.click()
+    if (e.key === "Enter") sendUserMessage(input.value)
   })
 }
 
@@ -41,9 +57,9 @@ if (micBtn) {
       try {
         const text = await window.electronAPI.stopRecording()
         if (liveEl) liveEl.textContent = ""
-        if (text && responseEl) {
-          responseEl.textContent = "You said: " + text
+        if (text) {
           if (input) input.value = text
+          await sendUserMessage(text)
         } else if (liveEl) {
           liveEl.textContent = "Could not understand audio"
         }
