@@ -49,6 +49,72 @@ function toggleWindow() {
 
 let recordingProcess = null
 let wakeWordProcess = null
+let assistantProcess = null
+let assistantPending = null
+
+function startAssistant() {
+  if (assistantProcess) return
+  const scriptPath = path.join(__dirname, "assistant.py")
+  assistantProcess = spawn("python", [scriptPath], {
+    cwd: __dirname,
+    stdio: ["pipe", "pipe", "pipe"],
+  })
+  let buffer = ""
+  assistantProcess.stdout.on("data", (chunk) => {
+    buffer += chunk.toString()
+    const lines = buffer.split("\n")
+    buffer = lines.pop() || ""
+    for (const line of lines) {
+      if (!line.trim() || !assistantPending) continue
+      let data = null
+      try {
+        data = JSON.parse(line)
+      } catch {
+        const lastBrace = line.lastIndexOf("}")
+        if (lastBrace !== -1) {
+          try {
+            const start = line.lastIndexOf("{", lastBrace)
+            if (start !== -1) data = JSON.parse(line.slice(start, lastBrace + 1))
+          } catch {}
+        }
+      }
+      if (data && ("reply" in data || "fallback" in data)) {
+        assistantPending.resolve(data)
+        assistantPending = null
+      }
+    }
+  })
+  assistantProcess.stderr.on("data", (chunk) => {
+    console.error("[assistant]", chunk.toString())
+  })
+  assistantProcess.on("close", (code) => {
+    assistantProcess = null
+    if (assistantPending) {
+      assistantPending.resolve({ fallback: true })
+      assistantPending = null
+    }
+    if (code !== 0 && code !== null) {
+      console.warn("[assistant] process exited with code", code)
+    }
+  })
+}
+
+function askAssistant(message) {
+  return new Promise((resolve) => {
+    if (!assistantProcess || !assistantProcess.stdin.writable) {
+      resolve({ fallback: true })
+      return
+    }
+    assistantPending = { resolve }
+    assistantProcess.stdin.write(JSON.stringify({ message }) + "\n")
+    setTimeout(() => {
+      if (assistantPending) {
+        assistantPending.resolve({ fallback: true })
+        assistantPending = null
+      }
+    }, 15000)
+  })
+}
 
 function startWakeWordListener() {
   if (wakeWordProcess) return
@@ -84,7 +150,11 @@ function startWakeWordListener() {
 
 ipcMain.handle("ask-openai", async (_, text) => {
   try {
-    return await askOpenAI(text)
+    const result = await askAssistant(text)
+    if (result.fallback) {
+      return await askOpenAI(text)
+    }
+    return result.reply ?? ""
   } catch (e) {
     throw new Error(e.message || "OpenAI request failed")
   }
@@ -121,11 +191,16 @@ ipcMain.handle("stop-recording", async () => {
 app.whenReady().then(() => {
   createWindow()
   globalShortcut.register("F9", toggleWindow)
+  startAssistant()
   startWakeWordListener()
 })
 
 app.on("will-quit", () => {
   globalShortcut.unregisterAll()
+  if (assistantProcess) {
+    assistantProcess.kill()
+    assistantProcess = null
+  }
   if (wakeWordProcess) {
     wakeWordProcess.kill()
     wakeWordProcess = null
