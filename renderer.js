@@ -1,5 +1,6 @@
 const input = document.getElementById("input")
 const sendBtn = document.getElementById("send")
+const screenshotBtn = document.getElementById("screenshot")
 const micBtn = document.getElementById("mic")
 const chatEl = document.getElementById("chat")
 const liveEl = document.getElementById("live")
@@ -40,6 +41,20 @@ if (sendBtn && input && chatEl) {
   sendBtn.addEventListener("click", () => sendUserMessage(input.value))
   input.addEventListener("keydown", (e) => {
     if (e.key === "Enter") sendUserMessage(input.value)
+  })
+}
+
+if (screenshotBtn) {
+  screenshotBtn.addEventListener("click", async () => {
+    if (!window.electronAPI?.screenshotAndType) return
+    const prompt = input?.value?.trim() || ""
+    if (input) input.value = ""
+    if (liveEl) liveEl.textContent = "Capturing screenshot…"
+    try {
+      await window.electronAPI.screenshotAndType(prompt)
+    } catch (e) {
+      if (liveEl) liveEl.textContent = e.message || "Screenshot workflow failed"
+    }
   })
 }
 

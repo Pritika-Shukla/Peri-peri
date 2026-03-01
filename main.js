@@ -1,10 +1,11 @@
 import dotenv from "dotenv";
 dotenv.config();
+import fs from "fs"
 import path from "path"
 import { fileURLToPath } from "url"
-import { app, BrowserWindow, globalShortcut, screen, ipcMain } from "electron"
+import { app, BrowserWindow, globalShortcut, screen, ipcMain, clipboard } from "electron"
 import { spawn } from "child_process"
-import { ask as askOpenAI } from "./services/openai.js"
+import { ask as askOpenAI, askWithScreenshot } from "./services/openai.js"
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -148,10 +149,90 @@ function startWakeWordListener() {
   })
 }
 
+const DEFAULT_SCREENSHOT_PROMPT = [
+  "Analyze this screenshot of my screen.",
+  "Identify the active text input area, reply box, or composition field that needs content.",
+  "Based on the visible context (emails, chats, forms, documents, etc.),",
+  "generate an appropriate, natural response for that field.",
+  "Output ONLY the response text — no explanations, no labels, no quotation marks.",
+].join(" ")
+
+function takeScreenshot() {
+  return new Promise((resolve) => {
+    const scriptPath = path.join(__dirname, "screencapture.py")
+    const proc = spawn("python", [scriptPath], { cwd: __dirname })
+    let stdout = ""
+    proc.stdout.on("data", (chunk) => { stdout += chunk })
+    proc.stderr.on("data", (chunk) => {
+      console.error("[screencapture]", chunk.toString())
+    })
+    proc.on("close", () => {
+      try {
+        const data = JSON.parse(stdout.trim())
+        resolve(data.error ? null : data.path)
+      } catch {
+        resolve(null)
+      }
+    })
+  })
+}
+
+function simulatePaste() {
+  return new Promise((resolve) => {
+    const scriptPath = path.join(__dirname, "autotype.py")
+    const proc = spawn("python", [scriptPath], { cwd: __dirname })
+    proc.on("close", () => resolve())
+  })
+}
+
+async function screenshotRespondAndType(userPrompt) {
+  const wasVisible = mainWindow?.isVisible()
+  if (wasVisible) mainWindow.hide()
+
+  await new Promise((r) => setTimeout(r, 500))
+
+  const screenshotPath = await takeScreenshot()
+  if (!screenshotPath) throw new Error("Screenshot capture failed")
+
+  let base64Image
+  try {
+    base64Image = fs.readFileSync(screenshotPath).toString("base64")
+  } finally {
+    try { fs.unlinkSync(screenshotPath) } catch {}
+  }
+
+  const prompt = userPrompt?.trim() || DEFAULT_SCREENSHOT_PROMPT
+  const response = await askWithScreenshot(prompt, base64Image)
+  if (!response) throw new Error("AI returned an empty response")
+
+  clipboard.writeText(response)
+  await simulatePaste()
+
+  return response
+}
+
+ipcMain.handle("screenshot-respond-and-type", async (_, userPrompt) => {
+  try {
+    return await screenshotRespondAndType(userPrompt)
+  } catch (e) {
+    throw new Error(e.message || "Screenshot workflow failed")
+  }
+})
+
 ipcMain.handle("ask-openai", async (_, text) => {
   try {
     const result = await askAssistant(text)
     if (result.fallback) {
+      const screenshotPath = await takeScreenshot()
+      if (screenshotPath) {
+        let base64Image
+        try {
+          base64Image = fs.readFileSync(screenshotPath).toString("base64")
+        } finally {
+          try { fs.unlinkSync(screenshotPath) } catch {}
+        }
+        return await askWithScreenshot(text, base64Image)
+      }
       return await askOpenAI(text)
     }
     return result.reply ?? ""
@@ -191,6 +272,21 @@ ipcMain.handle("stop-recording", async () => {
 app.whenReady().then(() => {
   createWindow()
   globalShortcut.register("F9", toggleWindow)
+  globalShortcut.register("F10", async () => {
+    let userPrompt = ""
+    if (mainWindow?.isVisible()) {
+      try {
+        userPrompt = await mainWindow.webContents.executeJavaScript(
+          'document.getElementById("input")?.value || ""'
+        )
+      } catch {}
+    }
+    try {
+      await screenshotRespondAndType(userPrompt)
+    } catch (e) {
+      console.error("[screenshot-workflow]", e.message)
+    }
+  })
   startAssistant()
   startWakeWordListener()
 })

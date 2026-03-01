@@ -3,3 +3,4 @@ pyaudio
 openwakeword
 numpy
 appopener
+pyautogui

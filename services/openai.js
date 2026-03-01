@@ -13,7 +13,25 @@ export async function ask(prompt) {
         role: "user",
         content: [{ type: "input_text", text: prompt }],
       },
-      
+    ],
+  })
+  return response.output_text ?? ""
+}
+
+export async function askWithScreenshot(prompt, base64Image) {
+  const response = await client.responses.create({
+    model: "gpt-4o",
+    input: [
+      {
+        role: "user",
+        content: [
+          {
+            type: "input_image",
+            image_url: `data:image/png;base64,${base64Image}`,
+          },
+          { type: "input_text", text: prompt },
+        ],
+      },
     ],
   })
   return response.output_text ?? ""
