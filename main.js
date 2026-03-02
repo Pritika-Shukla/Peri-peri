@@ -25,11 +25,13 @@ function createWindow() {
     show: false,
     resizable: false,
     transparent: true,
+    backgroundColor: "#00000000",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
     },
   })
 
+  mainWindow.setContentProtection(true)
   mainWindow.loadFile(path.join(__dirname, "index.html"))
 
   mainWindow.on("blur", () => {
@@ -59,6 +61,7 @@ function startAssistant() {
   assistantProcess = spawn("python", [scriptPath], {
     cwd: __dirname,
     stdio: ["pipe", "pipe", "pipe"],
+    windowsHide: true,
   })
   let buffer = ""
   assistantProcess.stdout.on("data", (chunk) => {
@@ -123,6 +126,7 @@ function startWakeWordListener() {
   wakeWordProcess = spawn("python", [scriptPath], {
     cwd: __dirname,
     stdio: ["ignore", "pipe", "pipe"],
+    windowsHide: true,
   })
   let buffer = ""
   wakeWordProcess.stdout.on("data", (chunk) => {
@@ -160,7 +164,7 @@ const DEFAULT_SCREENSHOT_PROMPT = [
 function takeScreenshot() {
   return new Promise((resolve) => {
     const scriptPath = path.join(__dirname, "screencapture.py")
-    const proc = spawn("python", [scriptPath], { cwd: __dirname })
+    const proc = spawn("python", [scriptPath], { cwd: __dirname, windowsHide: true })
     let stdout = ""
     proc.stdout.on("data", (chunk) => { stdout += chunk })
     proc.stderr.on("data", (chunk) => {
@@ -180,7 +184,7 @@ function takeScreenshot() {
 function simulatePaste() {
   return new Promise((resolve) => {
     const scriptPath = path.join(__dirname, "autotype.py")
-    const proc = spawn("python", [scriptPath], { cwd: __dirname })
+    const proc = spawn("python", [scriptPath], { cwd: __dirname, windowsHide: true })
     proc.on("close", () => resolve())
   })
 }
@@ -247,6 +251,7 @@ ipcMain.handle("start-recording", () => {
   recordingProcess = spawn("python", [scriptPath, "--record-until-stop"], {
     cwd: __dirname,
     stdio: ["pipe", "pipe", "pipe"],
+    windowsHide: true,
   })
   return true
 })
