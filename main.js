@@ -154,11 +154,10 @@ function startWakeWordListener() {
 }
 
 const DEFAULT_SCREENSHOT_PROMPT = [
-  "Analyze this screenshot of my screen.",
-  "Identify the active text input area, reply box, or composition field that needs content.",
-  "Based on the visible context (emails, chats, forms, documents, etc.),",
-  "generate an appropriate, natural response for that field.",
-  "Output ONLY the response text — no explanations, no labels, no quotation marks.",
+  "Look at this screenshot of my screen.",
+  "Read the full visible conversation or context (email thread, chat, form, document, etc.).",
+  "Write a fitting, natural reply for that field — match the tone, language, and intent of the conversation.",
+  "Give ONLY the raw text to type. No labels, no quotes, no explanations, no markdown, no prefixes like 'Reply:' or 'Response:'.",
 ].join(" ")
 
 function takeScreenshot() {
