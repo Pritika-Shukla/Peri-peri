@@ -55,6 +55,22 @@ let wakeWordProcess = null
 let assistantProcess = null
 let assistantPending = null
 
+function runVolumeCommand(action, value) {
+  const scriptPath = path.join(__dirname, "features", "volume.py")
+  const args = [scriptPath, action]
+  if (action === "set" && typeof value === "number") {
+    args.push(String(value))
+  }
+  const proc = spawn("python", args, {
+    cwd: __dirname,
+    stdio: "ignore",
+    windowsHide: true,
+  })
+  proc.on("error", (err) => {
+    console.error("[volume]", err)
+  })
+}
+
 function startAssistant() {
   if (assistantProcess) return
   const scriptPath = path.join(__dirname, "assistant.py")
@@ -82,7 +98,7 @@ function startAssistant() {
           } catch {}
         }
       }
-      if (data && ("reply" in data || "fallback" in data)) {
+      if (data && ("reply" in data || "fallback" in data || "action" in data)) {
         assistantPending.resolve(data)
         assistantPending = null
       }
@@ -222,9 +238,40 @@ ipcMain.handle("screenshot-respond-and-type", async (_, userPrompt) => {
   }
 })
 
+ipcMain.handle("volume-control", async (_, action) => {
+  runVolumeCommand(action)
+  return true
+})
+
 ipcMain.handle("ask-openai", async (_, text) => {
   try {
     const result = await askAssistant(text)
+
+    // Handle structured actions from the local assistant first
+    if (!result.fallback && result.action) {
+      if (result.action === "volume_up") {
+        runVolumeCommand("up")
+        return "Turning volume up."
+      }
+      if (result.action === "volume_down") {
+        runVolumeCommand("down")
+        return "Turning volume down."
+      }
+      if (result.action === "volume_mute") {
+        runVolumeCommand("mute")
+        return "Muting volume."
+      }
+      if (result.action === "volume_unmute") {
+        runVolumeCommand("unmute")
+        return "Unmuting volume."
+      }
+      if (result.action === "volume_set" && typeof result.value === "number") {
+        const pct = Math.max(0, Math.min(result.value, 100))
+        runVolumeCommand("set", pct)
+        return `Setting volume to ${pct}%.`
+      }
+    }
+
     if (result.fallback) {
       const screenshotPath = await takeScreenshot()
       if (screenshotPath) {

@@ -21,6 +21,7 @@
       box-sizing: border-box;
       display: flex;
       flex-direction: column;
+      -webkit-app-region: drag;
     }
 
     input {
@@ -33,6 +34,7 @@
       background: #111;
       color: white;
       box-sizing: border-box;
+      -webkit-app-region: no-drag;
     }
 
     .row {
@@ -55,6 +57,7 @@
       color: white;
       cursor: pointer;
       font-size: 18px;
+      -webkit-app-region: no-drag;
     }
     .btn:hover { background: #444; }
 
@@ -68,6 +71,7 @@
       color: white;
       cursor: pointer;
       font-size: 18px;
+      -webkit-app-region: no-drag;
     }
     .mic:hover { background: #444; }
     .mic.recording { background: #c00; }
@@ -78,6 +82,7 @@
       color: #aaa;
       min-height: 1.2em;
       flex-shrink: 0;
+      -webkit-app-region: no-drag;
     }
 
     .chat {
@@ -94,6 +99,7 @@
 
       scrollbar-width: thin;
       scrollbar-color: #444 #111;
+      -webkit-app-region: no-drag;
     }
 
     .chat::-webkit-scrollbar { width: 6px; }

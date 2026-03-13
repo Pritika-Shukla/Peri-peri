@@ -4,3 +4,4 @@ openwakeword
 numpy
 appopener
 pyautogui
+pycaw
