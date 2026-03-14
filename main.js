@@ -71,6 +71,22 @@ function runVolumeCommand(action, value) {
   })
 }
 
+function runBrightnessCommand(action, value) {
+  const scriptPath = path.join(__dirname, "features", "brightness.py")
+  const args = [scriptPath, action]
+  if (action === "set" && typeof value === "number") {
+    args.push(String(value))
+  }
+  const proc = spawn("python", args, {
+    cwd: __dirname,
+    stdio: "ignore",
+    windowsHide: true,
+  })
+  proc.on("error", (err) => {
+    console.error("[brightness]", err)
+  })
+}
+
 function startAssistant() {
   if (assistantProcess) return
   const scriptPath = path.join(__dirname, "assistant.py")
@@ -243,6 +259,11 @@ ipcMain.handle("volume-control", async (_, action) => {
   return true
 })
 
+ipcMain.handle("brightness-control", async (_, action, value) => {
+  runBrightnessCommand(action, value)
+  return true
+})
+
 ipcMain.handle("ask-openai", async (_, text) => {
   try {
     const result = await askAssistant(text)
@@ -269,6 +290,19 @@ ipcMain.handle("ask-openai", async (_, text) => {
         const pct = Math.max(0, Math.min(result.value, 100))
         runVolumeCommand("set", pct)
         return `Setting volume to ${pct}%.`
+      }
+      if (result.action === "brightness_up") {
+        runBrightnessCommand("up")
+        return "Turning brightness up."
+      }
+      if (result.action === "brightness_down") {
+        runBrightnessCommand("down")
+        return "Turning brightness down."
+      }
+      if (result.action === "brightness_set" && typeof result.value === "number") {
+        const pct = Math.max(0, Math.min(result.value, 100))
+        runBrightnessCommand("set", pct)
+        return `Setting brightness to ${pct}%.`
       }
     }
 

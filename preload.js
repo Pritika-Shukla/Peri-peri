@@ -5,4 +5,5 @@ contextBridge.exposeInMainWorld("electronAPI", {
   startRecording: () => ipcRenderer.invoke("start-recording"),
   stopRecording: () => ipcRenderer.invoke("stop-recording"),
   screenshotAndType: (prompt) => ipcRenderer.invoke("screenshot-respond-and-type", prompt),
+  brightnessControl: (action, value) => ipcRenderer.invoke("brightness-control", action, value),
 })

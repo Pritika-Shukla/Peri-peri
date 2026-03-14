@@ -22,6 +22,16 @@ VOLUME_SET_RE = re.compile(
     r"\b(?:set\s+)?volume\s+(?:to\s+)?(\d{1,3})\s*(?:percent|%)?\b", re.IGNORECASE
 )
 
+BRIGHTNESS_UP_RE = re.compile(
+    r"\b(brightness\s+up|increase\s+brightness|turn\s+up\s+(?:the\s+)?brightness)\b", re.IGNORECASE
+)
+BRIGHTNESS_DOWN_RE = re.compile(
+    r"\b(brightness\s+down|decrease\s+brightness|turn\s+down\s+(?:the\s+)?brightness)\b", re.IGNORECASE
+)
+BRIGHTNESS_SET_RE = re.compile(
+    r"\b(?:set\s+)?brightness\s+(?:to\s+)?(\d{1,3})\s*(?:percent|%)?\b", re.IGNORECASE
+)
+
 
 def _clean_app_name(s):
     if not s:
@@ -53,6 +63,16 @@ def process_command(text):
         return {"action": "volume_mute", "fallback": False}
     if UNMUTE_RE.search(t):
         return {"action": "volume_unmute", "fallback": False}
+
+    # Brightness commands (handled in Electron main via action)
+    m = BRIGHTNESS_SET_RE.search(t)
+    if m:
+        percent = int(m.group(1))
+        return {"action": "brightness_set", "value": percent, "fallback": False}
+    if BRIGHTNESS_UP_RE.search(t):
+        return {"action": "brightness_up", "fallback": False}
+    if BRIGHTNESS_DOWN_RE.search(t):
+        return {"action": "brightness_down", "fallback": False}
 
     # App open/close commands
     if open_app is None:

@@ -5,3 +5,4 @@ numpy
 appopener
 pyautogui
 pycaw
+screen-brightness-control
