@@ -97,26 +97,3 @@ Set a reminder
 ```
 
 ---
-
-## Configuration
-
-**Wake word**
-
-Edit `wakeword.py` to change the wake word or detection sensitivity.
-
-**Application mapping**
-
-Edit `appopener.py`:
-
-```python
-APPLICATIONS = {
-    "chrome": "google-chrome",
-    "vs code": "code",
-    "terminal": "gnome-terminal"
-}
-```
-
----
-
-
-If you want, I can also show you **how to make this README look like a top-tier repo (with badges + demo GIF + architecture diagram)** which will make your GitHub profile look **much stronger to recruiters.**
